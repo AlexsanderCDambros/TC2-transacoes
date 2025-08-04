@@ -1,10 +1,25 @@
-import React from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import TransactionForm from '../components/TransactionForm/TransactionForm';
-import { createTransaction } from '../services/api';
+import { createTransaction, fetchAccount } from '../services/api';
 
 const CreateTransaction = () => {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const id = await fetchAccount();
+        sessionStorage.setItem('accountId', id);
+      } catch (err) {
+        console.error('Error getting account Id:', err);
+      } 
+    };
+
+    if(!sessionStorage.getItem('accountId')){
+      loadData();
+    }
+  }, []);
 
   const handleSubmit = async (formData) => {
     try {
