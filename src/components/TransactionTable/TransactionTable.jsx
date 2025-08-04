@@ -43,62 +43,60 @@ const TransactionTable = ({ transactions, onEdit, onDelete }) => {
     page * rowsPerPage + rowsPerPage
   );
 
-  const getFileExtensionFromBase64 = (base64String) => {
-    // Assinaturas mágicas de tipos de arquivo em Base64
-    const signatures = {
-      'JVBERi0': 'pdf',       // PDF
-      'iVBORw0KGgo': 'png',   // PNG
-      '/9j/4AAQ': 'jpg',      // JPEG
-      'R0lGODdh': 'gif',      // GIF
-      'R0lGODlh': 'gif',      // GIF
-      'UklGR': 'webp',        // WEBP
-      'UEsDBBQ': 'docx',      // DOCX
-      'PK': 'zip'             // ZIP ou outros baseados em PK
-    };
-
-    // Verifica cada assinatura
-    for (const [signature, ext] of Object.entries(signatures)) {
-      if (base64String.startsWith(signature)) {
-        return ext;
-      }
-    }
-
-    if (base64String.substring(0, 10).includes('/9j/')) {
-      return 'jpg';
-    }
-
-    // Fallback para binário se não reconhecer
-    return 'bin';
-  };
 
   // Função de download atualizada
   const handleDownload = (transaction) => {
     if (!transaction.anexo) return;
 
-    // Tenta detectar a extensão
-    const extension = getFileExtensionFromBase64(transaction.anexo);
-    const filename = `anexo_${transaction.id}.${extension}`;
-
-    // Tenta determinar o tipo MIME
-    const mimeTypes = {
-      pdf: 'application/pdf',
-      png: 'image/png',
-      jpg: 'image/jpeg',
-      gif: 'image/gif',
-      webp: 'image/webp',
-      docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      zip: 'application/zip'
+    // Pega a extensão do nome original ou tenta detectar
+    const getExtension = () => {
+      if (transaction.anexoFileName) {
+        return transaction.anexoFileName.split('.').pop();
+      }
+      // Fallback: detecção por assinatura (como no código anterior)
+      const signatures = {
+        '/9j/': 'jpg',
+        'iVBORw': 'png',
+        'JVBERi': 'pdf'
+      };
+      for (const [signature, ext] of Object.entries(signatures)) {
+        if (transaction.anexo.startsWith(signature)) return ext;
+      }
+      return 'bin';
     };
 
-    const mimeType = mimeTypes[extension] || 'application/octet-stream';
+    const extension = getExtension();
+    const filename = transaction.anexoFileName || `anexo_${transaction.id}.${extension}`;
 
-    // Cria o link de download
+    // Cria o Blob e força o download
+    const byteCharacters = atob(transaction.anexo);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+
+    // Tenta detectar o tipo MIME
+    const mimeType = {
+      'jpg': 'image/jpeg',
+      'png': 'image/png',
+      'pdf': 'application/pdf'
+    }[extension] || 'application/octet-stream';
+
+    const blob = new Blob([byteArray], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+
     const link = document.createElement('a');
-    link.href = `data:${mimeType};base64,${transaction.anexo}`;
-    link.download = filename;
+    link.href = url;
+    link.download = filename;  // Usa o nome original aqui
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
+
+    // Limpeza
+    setTimeout(() => {
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }, 100);
   };
 
   return (

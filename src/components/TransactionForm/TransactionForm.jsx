@@ -29,15 +29,19 @@ const TransactionForm = ({ initialValues, onSubmit, isEdit }) => {
   };
 
   const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData(prev => ({ ...prev, anexo: reader.result.split(',')[1] }));
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+  const file = e.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setFormData(prev => ({ 
+        ...prev, 
+        anexo: reader.result.split(',')[1],
+        anexoFileName: file.name  // Guarda o nome original
+      }));
+    };
+    reader.readAsDataURL(file);
+  }
+};
 
   const validate = () => {
     const newErrors = {};
